@@ -30,11 +30,13 @@ OPTIONS
 
 .. option:: --check-prefix prefix
 
- FileCheck searches the contents of ``match-filename`` for patterns to match.
- By default, these patterns are prefixed with "``CHECK:``".  If you'd like to
- use a different prefix (e.g. because the same input file is checking multiple
- different tool or options), the :option:`--check-prefix` argument allows you
- to specify a specific prefix to match.
+ FileCheck searches the contents of ``match-filename`` for patterns to
+ match.  By default, these patterns are prefixed with "``CHECK:``".
+ If you'd like to use a different prefix (e.g. because the same input
+ file is checking multiple different tool or options), the
+ :option:`--check-prefix` argument allows you to specify one or more
+ prefixes to match. Multiple prefixes are useful for tests which might
+ change for different run options, but most lines remain the same.
 
 .. option:: --input-file filename
 
@@ -46,6 +48,17 @@ OPTIONS
  tabs) which causes it to ignore these differences (a space will match a tab).
  The :option:`--strict-whitespace` argument disables this behavior. End-of-line
  sequences are canonicalized to UNIX-style ``\n`` in all modes.
+
+.. option:: --implicit-check-not check-pattern
+
+  Adds implicit negative checks for the specified patterns between positive
+  checks. The option allows writing stricter tests without stuffing them with
+  ``CHECK-NOT``\ s.
+
+  For example, "``--implicit-check-not warning:``" can be useful when testing
+  diagnostic messages from tools that don't have an option similar to ``clang
+  -verify``. With this option FileCheck will verify that input does not contain
+  warnings not covered by any ``CHECK:`` patterns.
 
 .. option:: -version
 

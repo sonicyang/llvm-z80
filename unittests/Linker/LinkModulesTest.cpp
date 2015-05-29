@@ -7,12 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Linker.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Linker/Linker.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -22,7 +24,6 @@ namespace {
 class LinkModuleTest : public testing::Test {
 protected:
   virtual void SetUp() {
-    LLVMContext &Ctx = getGlobalContext();
     M.reset(new Module("MyModule", Ctx));
     FunctionType *FTy = FunctionType::get(
         Type::getInt8PtrTy(Ctx), Type::getInt32Ty(Ctx), false /*=isVarArg*/);
@@ -37,7 +38,7 @@ protected:
     ArrayType *AT = ArrayType::get(Type::getInt8PtrTy(Ctx), 3);
 
     GV = new GlobalVariable(*M.get(), AT, false /*=isConstant*/,
-                            GlobalValue::InternalLinkage, 0, "switch.bas");
+                            GlobalValue::InternalLinkage, nullptr,"switch.bas");
 
     // Global Initializer
     std::vector<Constant *> Init;
@@ -57,7 +58,8 @@ protected:
 
   virtual void TearDown() { M.reset(); }
 
-  OwningPtr<Module> M;
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M;
   Function *F;
   GlobalVariable *GV;
   BasicBlock *EntryBB;
@@ -67,7 +69,6 @@ protected:
 };
 
 TEST_F(LinkModuleTest, BlockAddress) {
-  LLVMContext &Ctx = getGlobalContext();
   IRBuilder<> Builder(EntryBB);
 
   std::vector<Value *> GEPIndices;
@@ -88,8 +89,8 @@ TEST_F(LinkModuleTest, BlockAddress) {
   Builder.SetInsertPoint(ExitBB);
   Builder.CreateRet(ConstantPointerNull::get(Type::getInt8PtrTy(Ctx)));
 
-  Module *LinkedModule = new Module("MyModuleLinked", getGlobalContext());
-  Linker::LinkModules(LinkedModule, M.get(), Linker::PreserveSource, 0);
+  Module *LinkedModule = new Module("MyModuleLinked", Ctx);
+  Linker::LinkModules(LinkedModule, M.get());
 
   // Delete the original module.
   M.reset();
@@ -121,6 +122,59 @@ TEST_F(LinkModuleTest, BlockAddress) {
             LinkedModule->getFunction("ba_func"));
 
   delete LinkedModule;
+}
+
+static Module *getInternal(LLVMContext &Ctx) {
+  Module *InternalM = new Module("InternalModule", Ctx);
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx), false /*=isVarArgs*/);
+
+  Function *F =
+      Function::Create(FTy, Function::InternalLinkage, "bar", InternalM);
+  F->setCallingConv(CallingConv::C);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "", F);
+  IRBuilder<> Builder(BB);
+  Builder.CreateRetVoid();
+
+  StructType *STy = StructType::create(Ctx, PointerType::get(FTy, 0));
+
+  GlobalVariable *GV =
+      new GlobalVariable(*InternalM, STy, false /*=isConstant*/,
+                         GlobalValue::InternalLinkage, nullptr, "g");
+
+  GV->setInitializer(ConstantStruct::get(STy, F));
+  return InternalM;
+}
+
+TEST_F(LinkModuleTest, EmptyModule) {
+  std::unique_ptr<Module> InternalM(getInternal(Ctx));
+  std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
+  Linker::LinkModules(EmptyM.get(), InternalM.get());
+}
+
+TEST_F(LinkModuleTest, EmptyModule2) {
+  std::unique_ptr<Module> InternalM(getInternal(Ctx));
+  std::unique_ptr<Module> EmptyM(new Module("EmptyModule1", Ctx));
+  Linker::LinkModules(InternalM.get(), EmptyM.get());
+}
+
+TEST_F(LinkModuleTest, TypeMerge) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  const char *M1Str = "%t = type {i32}\n"
+                      "@t1 = weak global %t zeroinitializer\n";
+  std::unique_ptr<Module> M1 = parseAssemblyString(M1Str, Err, C);
+
+  const char *M2Str = "%t = type {i32}\n"
+                      "@t2 = weak global %t zeroinitializer\n";
+  std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, C);
+
+  Linker::LinkModules(M1.get(), M2.get(), [](const llvm::DiagnosticInfo &){});
+
+  EXPECT_EQ(M1->getNamedGlobal("t1")->getType(),
+            M1->getNamedGlobal("t2")->getType());
 }
 
 } // end anonymous namespace

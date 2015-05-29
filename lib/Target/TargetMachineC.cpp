@@ -18,33 +18,18 @@
 #include "llvm/IR/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
 
 using namespace llvm;
-
-inline DataLayout *unwrap(LLVMTargetDataRef P) {
-  return reinterpret_cast<DataLayout*>(P);
-}
-
-inline LLVMTargetDataRef wrap(const DataLayout *P) {
-  return reinterpret_cast<LLVMTargetDataRef>(const_cast<DataLayout*>(P));
-}
-
-inline TargetLibraryInfo *unwrap(LLVMTargetLibraryInfoRef P) {
-  return reinterpret_cast<TargetLibraryInfo*>(P);
-}
-
-inline LLVMTargetLibraryInfoRef wrap(const TargetLibraryInfo *P) {
-  TargetLibraryInfo *X = const_cast<TargetLibraryInfo*>(P);
-  return reinterpret_cast<LLVMTargetLibraryInfoRef>(X);
-}
 
 inline TargetMachine *unwrap(LLVMTargetMachineRef P) {
   return reinterpret_cast<TargetMachine*>(P);
@@ -62,7 +47,7 @@ inline LLVMTargetRef wrap(const Target * P) {
 
 LLVMTargetRef LLVMGetFirstTarget() {
   if(TargetRegistry::begin() == TargetRegistry::end()) {
-    return NULL;
+    return nullptr;
   }
 
   const Target* target = &*TargetRegistry::begin();
@@ -72,17 +57,15 @@ LLVMTargetRef LLVMGetNextTarget(LLVMTargetRef T) {
   return wrap(unwrap(T)->getNext());
 }
 
-LLVMBool LLVMGetTargetFromName(const char *Name, LLVMTargetRef *T) {
+LLVMTargetRef LLVMGetTargetFromName(const char *Name) {
+  StringRef NameRef = Name;
   for (TargetRegistry::iterator IT = TargetRegistry::begin(),
                                 IE = TargetRegistry::end(); IT != IE; ++IT) {
-    if (IT->getName() == Name) {
-      *T = wrap(&*IT);
-
-      return 0;
-    }
+    if (IT->getName() == NameRef)
+      return wrap(&*IT);
   }
   
-  return 1;
+  return nullptr;
 }
 
 LLVMBool LLVMGetTargetFromTriple(const char* TripleStr, LLVMTargetRef *T,
@@ -121,9 +104,10 @@ LLVMBool LLVMTargetHasAsmBackend(LLVMTargetRef T) {
   return unwrap(T)->hasMCAsmBackend();
 }
 
-LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T, char* Triple,
-  char* CPU, char* Features, LLVMCodeGenOptLevel Level, LLVMRelocMode Reloc,
-  LLVMCodeModel CodeModel) {
+LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
+        const char* Triple, const char* CPU, const char* Features,
+        LLVMCodeGenOptLevel Level, LLVMRelocMode Reloc,
+        LLVMCodeModel CodeModel) {
   Reloc::Model RM;
   switch (Reloc){
     case LLVMRelocStatic:
@@ -189,7 +173,7 @@ char* LLVMGetTargetMachineFeatureString(LLVMTargetMachineRef T) {
 }
 
 LLVMTargetDataRef LLVMGetTargetMachineData(LLVMTargetMachineRef T) {
-  return wrap(unwrap(T)->getDataLayout());
+  return wrap(unwrap(T)->getSubtargetImpl()->getDataLayout());
 }
 
 void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
@@ -206,14 +190,15 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
 
   std::string error;
 
-  const DataLayout* td = TM->getDataLayout();
+  const DataLayout *td = TM->getSubtargetImpl()->getDataLayout();
 
   if (!td) {
     error = "No DataLayout in TargetMachine";
     *ErrorMessage = strdup(error.c_str());
     return true;
   }
-  pass.add(new DataLayout(*td));
+  Mod->setDataLayout(td);
+  pass.add(new DataLayoutPass());
 
   TargetMachine::CodeGenFileType ft;
   switch (codegen) {
@@ -238,10 +223,10 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
 
 LLVMBool LLVMTargetMachineEmitToFile(LLVMTargetMachineRef T, LLVMModuleRef M,
   char* Filename, LLVMCodeGenFileType codegen, char** ErrorMessage) {
-  std::string error;
-  raw_fd_ostream dest(Filename, error, sys::fs::F_Binary);
-  if (!error.empty()) {
-    *ErrorMessage = strdup(error.c_str());
+  std::error_code EC;
+  raw_fd_ostream dest(Filename, EC, sys::fs::F_None);
+  if (EC) {
+    *ErrorMessage = strdup(EC.message().c_str());
     return true;
   }
   formatted_raw_ostream destf(dest);
@@ -267,4 +252,8 @@ LLVMBool LLVMTargetMachineEmitToMemoryBuffer(LLVMTargetMachineRef T,
 
 char *LLVMGetDefaultTargetTriple(void) {
   return strdup(sys::getDefaultTargetTriple().c_str());
+}
+
+void LLVMAddAnalysisPasses(LLVMTargetMachineRef T, LLVMPassManagerRef PM) {
+  unwrap(T)->addAnalysisPasses(*unwrap(PM));
 }

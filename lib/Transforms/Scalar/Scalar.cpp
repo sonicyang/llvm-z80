@@ -17,8 +17,8 @@
 #include "llvm-c/Initialization.h"
 #include "llvm-c/Transforms/Scalar.h"
 #include "llvm/Analysis/Passes.h"
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassManager.h"
 
@@ -28,14 +28,18 @@ using namespace llvm;
 /// ScalarOpts library.
 void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeADCEPass(Registry);
-  initializeCodeGenPreparePass(Registry);
+  initializeAlignmentFromAssumptionsPass(Registry);
+  initializeSampleProfileLoaderPass(Registry);
+  initializeConstantHoistingPass(Registry);
   initializeConstantPropagationPass(Registry);
   initializeCorrelatedValuePropagationPass(Registry);
   initializeDCEPass(Registry);
   initializeDeadInstEliminationPass(Registry);
+  initializeScalarizerPass(Registry);
   initializeDSEPass(Registry);
   initializeGVNPass(Registry);
   initializeEarlyCSEPass(Registry);
+  initializeFlattenCFGPassPass(Registry);
   initializeIndVarSimplifyPass(Registry);
   initializeJumpThreadingPass(Registry);
   initializeLICMPass(Registry);
@@ -43,12 +47,14 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeLoopInstSimplifyPass(Registry);
   initializeLoopRotatePass(Registry);
   initializeLoopStrengthReducePass(Registry);
+  initializeLoopRerollPass(Registry);
   initializeLoopUnrollPass(Registry);
   initializeLoopUnswitchPass(Registry);
   initializeLoopIdiomRecognizePass(Registry);
   initializeLowerAtomicPass(Registry);
   initializeLowerExpectIntrinsicPass(Registry);
   initializeMemCpyOptPass(Registry);
+  initializeMergedLoadStoreMotionPass(Registry);
   initializePartiallyInlineLibCallsPass(Registry);
   initializeReassociatePass(Registry);
   initializeRegToMemPass(Registry);
@@ -61,6 +67,8 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeStructurizeCFGPass(Registry);
   initializeSinkingPass(Registry);
   initializeTailCallElimPass(Registry);
+  initializeSeparateConstOffsetFromGEPPass(Registry);
+  initializeLoadCombinePass(Registry);
 }
 
 void LLVMInitializeScalarOpts(LLVMPassRegistryRef R) {
@@ -71,6 +79,10 @@ void LLVMAddAggressiveDCEPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createAggressiveDCEPass());
 }
 
+void LLVMAddAlignmentFromAssumptionsPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createAlignmentFromAssumptionsPass());
+}
+
 void LLVMAddCFGSimplificationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createCFGSimplificationPass());
 }
@@ -79,8 +91,16 @@ void LLVMAddDeadStoreEliminationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createDeadStoreEliminationPass());
 }
 
+void LLVMAddScalarizerPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createScalarizerPass());
+}
+
 void LLVMAddGVNPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createGVNPass());
+}
+
+void LLVMAddMergedLoadStoreMotionPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createMergedLoadStoreMotionPass());
 }
 
 void LLVMAddIndVarSimplifyPass(LLVMPassManagerRef PM) {
@@ -111,6 +131,10 @@ void LLVMAddLoopRotatePass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createLoopRotatePass());
 }
 
+void LLVMAddLoopRerollPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createLoopRerollPass());
+}
+
 void LLVMAddLoopUnrollPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createLoopUnrollPass());
 }
@@ -125,6 +149,10 @@ void LLVMAddMemCpyOptPass(LLVMPassManagerRef PM) {
 
 void LLVMAddPartiallyInlineLibCallsPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createPartiallyInlineLibCallsPass());
+}
+
+void LLVMAddLowerSwitchPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createLowerSwitchPass());
 }
 
 void LLVMAddPromoteMemoryToRegisterPass(LLVMPassManagerRef PM) {
@@ -170,6 +198,7 @@ void LLVMAddDemoteMemoryToRegisterPass(LLVMPassManagerRef PM) {
 
 void LLVMAddVerifierPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createVerifierPass());
+  // FIXME: should this also add createDebugInfoVerifierPass()?
 }
 
 void LLVMAddCorrelatedValuePropagationPass(LLVMPassManagerRef PM) {
@@ -182,6 +211,10 @@ void LLVMAddEarlyCSEPass(LLVMPassManagerRef PM) {
 
 void LLVMAddTypeBasedAliasAnalysisPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createTypeBasedAliasAnalysisPass());
+}
+
+void LLVMAddScopedNoAliasAAPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createScopedNoAliasAAPass());
 }
 
 void LLVMAddBasicAliasAnalysisPass(LLVMPassManagerRef PM) {
