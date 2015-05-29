@@ -80,7 +80,7 @@ public:
     hsail64,    // AMD HSAIL with 64-bit pointers
     spir,       // SPIR: standard portable IR for OpenCL 32-bit version
     spir64,     // SPIR: standard portable IR for OpenCL 64-bit version
-    z80         // Z80: Zilog Z80
+    z80,        // Z80: Zilog Z80
     kalimba     // Kalimba: generic kalimba
   };
   enum SubArchType {
