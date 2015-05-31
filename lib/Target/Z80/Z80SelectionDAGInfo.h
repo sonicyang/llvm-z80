@@ -19,7 +19,7 @@
 namespace llvm {
   class Z80SelectionDAGInfo : public TargetSelectionDAGInfo {
   public:
-    explicit Z80SelectionDAGInfo(const Z80TargetMachine &tm);
+    explicit Z80SelectionDAGInfo(const DataLayout &DL);
     ~Z80SelectionDAGInfo();
   }; // end class Z80SelectionDAGInfo
 } // end namespace llvm

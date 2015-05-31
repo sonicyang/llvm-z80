@@ -13,14 +13,18 @@
 
 #include "Z80InstrInfo.h"
 #include "Z80.h"
+#include "Z80TargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 
 #define GET_INSTRINFO_CTOR
 #include "Z80GenInstrInfo.inc"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "z80-instr-info"
 
 Z80InstrInfo::Z80InstrInfo(Z80TargetMachine &tm)
   : Z80GenInstrInfo(Z80::ADJCALLSTACKDOWN, Z80::ADJCALLSTACKUP),
@@ -195,8 +199,8 @@ bool Z80InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
       }
 
       // If the block has any instructions after a JP, delete them.
-      while (llvm::next(I) != MBB.end())
-        llvm::next(I)->eraseFromParent();
+      while (std::next(I) != MBB.end())
+        std::next(I)->eraseFromParent();
 
       Cond.clear();
       FBB = 0;
@@ -364,7 +368,8 @@ bool Z80InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const
 {
   MachineBasicBlock &MBB = *MI->getParent();
   MachineFunction &MF = *MBB.getParent();
-  const TargetRegisterInfo &RI = *MF.getTarget().getRegisterInfo();
+  // const TargetRegisterInfo &RI = *(TM.getRegisterInfo());
+  const TargetRegisterInfo &RI = *(MF.getSubtarget().getRegisterInfo());
   DebugLoc dl = MI->getDebugLoc();
   unsigned Opc, Reg, Imm, FPReg, Idx;
 

@@ -41,6 +41,7 @@ namespace llvm {
     Z80TargetMachine &TM;
   public:
     explicit Z80InstrInfo(Z80TargetMachine &tm);
+    virtual ~Z80InstrInfo() {}
 
     virtual const Z80RegisterInfo &getRegisterInfo() const { return RI; }
 

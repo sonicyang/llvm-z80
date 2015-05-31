@@ -19,6 +19,8 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+#define DEBUG_TYPE "z80-isel-dag-to-dag"
+
 namespace {
   class Z80DAGToDAGISel : public SelectionDAGISel {
   public:
@@ -27,7 +29,7 @@ namespace {
     {}
 #include "Z80GenDAGISel.inc"
   private:
-    SDNode *Select(SDNode *N);
+    virtual SDNode *Select(SDNode *N) override;
     bool SelectXAddr(SDValue N, SDValue &Base, SDValue &Disp);
     bool SelectIAddr(SDValue N, SDValue &Addr);
   }; // end class Z80DAGToDAGISel

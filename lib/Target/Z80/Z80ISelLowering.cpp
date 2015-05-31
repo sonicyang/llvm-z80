@@ -23,7 +23,7 @@
 using namespace llvm;
 
 Z80TargetLowering::Z80TargetLowering(Z80TargetMachine &TM)
-  : TargetLowering(TM, new TargetLoweringObjectFileELF())
+  : TargetLowering(TM)
 {
   addRegisterClass(MVT::i8, &Z80::GR8RegClass);
   addRegisterClass(MVT::i16, &Z80::GR16RegClass);
@@ -34,9 +34,11 @@ Z80TargetLowering::Z80TargetLowering(Z80TargetMachine &TM)
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
-  setLoadExtAction(ISD::EXTLOAD, MVT::i8, Expand);
-  setLoadExtAction(ISD::ZEXTLOAD, MVT::i8, Expand);
-  setLoadExtAction(ISD::SEXTLOAD, MVT::i8, Expand);
+  for (MVT VT : MVT::integer_valuetypes()) {
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i8, Expand);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i8, Expand);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Expand);
+  }
 
   setTruncStoreAction(MVT::i16, MVT::i8, Expand);
 
@@ -91,8 +93,7 @@ SDValue Z80TargetLowering::LowerFormalArguments(SDValue Chain,
   SmallVector<CCValAssign, 16> ArgLocs;
 
   // CCState - info about the registers and stack slot.
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(),
-    getTargetMachine(), ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs, *DAG.getContext());
 
   // Analyze Formal Arguments
   CCInfo.AnalyzeFormalArguments(Ins, CC_Z80);
@@ -172,8 +173,7 @@ SDValue Z80TargetLowering::LowerReturn(SDValue Chain,
   SmallVector<CCValAssign, 16> RVLocs;
 
   // CCState - Info about the registers and stack slot.
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(),
-    getTargetMachine(), RVLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs, *DAG.getContext());
 
   // Analyze return values.
   CCInfo.AnalyzeReturn(Outs, RetCC_Z80);
@@ -200,7 +200,8 @@ SDValue Z80TargetLowering::LowerReturn(SDValue Chain,
   if (Flag.getNode())
     RetOps.push_back(Flag);
 
-  return DAG.getNode(Z80ISD::RET, dl, MVT::Other, &RetOps[0], RetOps.size());
+  //return DAG.getNode(Z80ISD::RET, dl, MVT::Other, RetOps[0], RetOps.size());
+  return DAG.getNode(Z80ISD::RET, dl, MVT::Other, RetOps[0]);
 }
 
 SDValue Z80TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
@@ -223,8 +224,7 @@ SDValue Z80TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(),
-    getTargetMachine(), ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs, *DAG.getContext());
 
   CCInfo.AnalyzeCallOperands(Outs, CC_Z80);
 
@@ -268,7 +268,7 @@ SDValue Z80TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     {
       assert(VA.isMemLoc());
 
-      unsigned FP = MF.getTarget().getRegisterInfo()->getFrameRegister(MF);
+      unsigned FP = getTargetMachine().getSubtargetImpl()->getRegisterInfo()->getFrameRegister(MF);
 
       if (StackPtr.getNode() == 0)
         StackPtr = DAG.getCopyFromReg(Chain, dl, FP, getPointerTy());
@@ -291,8 +291,7 @@ SDValue Z80TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Transform all store nodes into one single node because all store nodes are
   // independent of each other.
   if (!MemOpChains.empty())
-    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                        &MemOpChains[0], MemOpChains.size());
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains[0]);
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
   // flag operands which copy the outgoing args into registers. The Flag is
@@ -321,7 +320,7 @@ SDValue Z80TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   // Add a register mask operand representing the call-preserved registers.
-  const TargetRegisterInfo *TRI = getTargetMachine().getRegisterInfo();
+  const TargetRegisterInfo *TRI = getTargetMachine().getSubtargetImpl()->getRegisterInfo();
   const uint32_t *Mask = TRI->getCallPreservedMask(CallConv);
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -334,7 +333,7 @@ SDValue Z80TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (Flag.getNode())
     Ops.push_back(Flag);
 
-  Chain = DAG.getNode(Z80ISD::CALL, dl, NodeTys, &Ops[0], Ops.size());
+  Chain = DAG.getNode(Z80ISD::CALL, dl, NodeTys, Ops[0]);
   Flag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -358,8 +357,7 @@ SDValue Z80TargetLowering::LowerCallResult(SDValue Chain, SDValue Flag,
 {
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(),
-    getTargetMachine(), RVLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs, *DAG.getContext());
 
   CCInfo.AnalyzeCallResult(Ins, RetCC_Z80);
 
@@ -709,7 +707,7 @@ SDValue Z80TargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const
   default: break;
   case ISD::CopyFromReg:
       if (RegisterSDNode *RN = dyn_cast<RegisterSDNode>(BasePtr.getOperand(1)))
-        if (RN->getReg() != getTargetMachine().getRegisterInfo()->getFrameRegister(
+        if (RN->getReg() != getTargetMachine().getSubtargetImpl()->getRegisterInfo()->getFrameRegister(
           DAG.getMachineFunction()))
           break;
   case ISD::FrameIndex:
@@ -769,7 +767,7 @@ SDValue Z80TargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const
     MVT::i16, LoRes, Hi);
 
   SDValue Ops[] = { HiRes, NewChain };
-  return DAG.getMergeValues(Ops, 2, dl);
+  return DAG.getMergeValues(Ops, dl);
 }
 
 //===----------------------------------------------------------------------===//
@@ -799,7 +797,7 @@ MachineBasicBlock* Z80TargetLowering::EmitSelectInstr(MachineInstr *MI,
   MachineBasicBlock *MBB) const
 {
   DebugLoc dl = MI->getDebugLoc();
-  const TargetInstrInfo &TII = *getTargetMachine().getInstrInfo();
+  const TargetInstrInfo &TII = *getTargetMachine().getSubtargetImpl()->getInstrInfo();
 
   const BasicBlock *LLVM_BB = MBB->getBasicBlock();
   MachineFunction::iterator I = MBB;
@@ -813,7 +811,7 @@ MachineBasicBlock* Z80TargetLowering::EmitSelectInstr(MachineInstr *MI,
   MF->insert(I, copy1MBB);
 
   copy1MBB->splice(copy1MBB->begin(), MBB,
-    llvm::next(MachineBasicBlock::iterator(MI)), MBB->end());
+    std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   copy1MBB->transferSuccessorsAndUpdatePHIs(MBB);
   MBB->addSuccessor(copy0MBB);
   MBB->addSuccessor(copy1MBB);
@@ -841,7 +839,7 @@ MachineBasicBlock* Z80TargetLowering::EmitShiftInstr(MachineInstr *MI,
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   DebugLoc dl = MI->getDebugLoc();
-  const TargetInstrInfo &TII = *getTargetMachine().getInstrInfo();
+  const TargetInstrInfo &TII = *getTargetMachine().getSubtargetImpl()->getInstrInfo();
 
   unsigned Opc, Opc2 = 0;
   const TargetRegisterClass *RC;
@@ -888,7 +886,7 @@ MachineBasicBlock* Z80TargetLowering::EmitShiftInstr(MachineInstr *MI,
   MF->insert(I, RemMBB);
 
   RemMBB->splice(RemMBB->begin(), MBB,
-    llvm::next<MachineBasicBlock::iterator>(MI), MBB->end());
+    std::next<MachineBasicBlock::iterator>(MI), MBB->end());
   RemMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
   // Add edges MBB => LoopMBB => RemMBB, MBB => RemMBB, LoopMBB => LoopMBB

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 
 #define GET_REGINFO_TARGET_DESC
 #include "Z80GenRegisterInfo.inc"
@@ -77,7 +78,7 @@ void Z80RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator I,
   MachineInstr &MI = *I;
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
-  const TargetFrameLowering *TFI = MF.getTarget().getFrameLowering();
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
   while (!MI.getOperand(i).isFI())
   {

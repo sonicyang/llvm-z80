@@ -15,6 +15,7 @@
 #include "Z80.h"
 #include "Z80InstrInfo.h"
 #include "Z80MachineFunctionInfo.h"
+#include "Z80TargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -38,7 +39,7 @@ void Z80FrameLowering::emitPrologue(MachineFunction &MF) const
   MachineFrameInfo *MFI = MF.getFrameInfo();
   Z80MachineFunctionInfo *Z80FI = MF.getInfo<Z80MachineFunctionInfo>();
   const Z80InstrInfo &TII = 
-    *static_cast<const Z80InstrInfo*>(MF.getTarget().getInstrInfo());
+    *static_cast<const Z80InstrInfo*>(TM.getInstrInfo());
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   uint64_t StackSize     = MFI->getStackSize();
@@ -69,7 +70,7 @@ void Z80FrameLowering::emitEpilogue(MachineFunction &MF,
   const MachineFrameInfo *MFI = MF.getFrameInfo();
   Z80MachineFunctionInfo *Z80FI = MF.getInfo<Z80MachineFunctionInfo>();
   const Z80InstrInfo &TII =
-    *static_cast<const Z80InstrInfo*>(MF.getTarget().getInstrInfo());
+    *static_cast<const Z80InstrInfo*>(TM.getInstrInfo());
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   unsigned RetOpcode = MBBI->getOpcode();
@@ -88,7 +89,7 @@ void Z80FrameLowering::emitEpilogue(MachineFunction &MF,
   // Skip the callee-saved pop instructions.
   while (MBBI != MBB.begin())
   {
-    MachineBasicBlock::iterator I = prior(MBBI);
+    MachineBasicBlock::iterator I = std::prev(MBBI);
     unsigned Opc = I->getOpcode();
     if (Opc != Z80::POP16r && !I->isTerminator())
       break;
@@ -119,7 +120,7 @@ bool Z80FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   if (MI != MBB.end()) dl = MI->getDebugLoc();
 
   MachineFunction &MF = *MBB.getParent();
-  const TargetInstrInfo &TII = *MF.getTarget().getInstrInfo();
+  const TargetInstrInfo &TII = *(TM.getInstrInfo());
   Z80MachineFunctionInfo *MFI = MF.getInfo<Z80MachineFunctionInfo>();
   MFI->setCalleeSavedFrameSize(CSI.size() * 2);
 
@@ -146,8 +147,7 @@ bool Z80FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
   DebugLoc dl;
   if (MI != MBB.end()) dl = MI->getDebugLoc();
 
-  MachineFunction &MF = *MBB.getParent();
-  const TargetInstrInfo &TII = *MF.getTarget().getInstrInfo();
+  const TargetInstrInfo &TII = *(TM.getInstrInfo());
 
   for (unsigned i = 0, e = CSI.size(); i != e; i++)
     BuildMI(MBB, MI, dl, TII.get(Z80::POP16r), CSI[i].getReg());
@@ -160,7 +160,7 @@ void Z80FrameLowering::processFunctionBeforeCalleeSavedScan(
 {
   if (hasFP(MF))
   {
-    unsigned FP = MF.getTarget().getRegisterInfo()->getFrameRegister(MF);
+    unsigned FP = TM.getRegisterInfo()->getFrameRegister(MF);
     MF.getRegInfo().setPhysRegUsed(FP);
   }
 }

@@ -19,14 +19,14 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-void Z80AsmPrinter::EmitInstruction(const MachineInstr *MI)
+/*void Z80AsmPrinter::EmitInstruction(const MachineInstr *MI)
 {
   Z80MCInstLower MCInstLowering(Mang, *MF, *this);
 
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   OutStreamer.EmitInstruction(TmpInst);
-}
+}*/
 
 //===----------------------------------------------------------------------===//
 // Target Registry Stuff

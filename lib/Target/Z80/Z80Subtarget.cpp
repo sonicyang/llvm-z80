@@ -16,6 +16,8 @@
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
+
+#define DEBUG_TYPE "z80-subtarget"
 #include "Z80GenSubtargetInfo.inc"
 
 using namespace llvm;

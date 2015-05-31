@@ -26,11 +26,13 @@ Z80TargetMachine::Z80TargetMachine(const Target &T, StringRef TT, StringRef CPU,
   CodeModel::Model CM, CodeGenOpt::Level OL)
   : LLVMTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL),
   DL("e-p:16:8:8-i8:8:8-i16:8:8-n8:16"),
-  FrameLowering(*this), InstrInfo(*this), TSInfo(*this),
+  FrameLowering(*this), InstrInfo(*this), TSInfo(this->DL),
   Subtarget(TT, CPU, FS), TLInfo(*this)
 {
   initAsmInfo();
 }
+
+Z80TargetMachine::~Z80TargetMachine() {}
 
 namespace {
   class Z80PassConfig : public TargetPassConfig {

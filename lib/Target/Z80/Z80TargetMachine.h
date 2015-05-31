@@ -34,6 +34,7 @@ namespace llvm {
     Z80TargetMachine(const Target &T, StringRef TT, StringRef CPU,
       StringRef FS, const TargetOptions &Options, Reloc::Model RM,
       CodeModel::Model CM, CodeGenOpt::Level OL);
+    ~Z80TargetMachine() override;
     virtual const DataLayout *getDataLayout() const { return &DL; }
     virtual const Z80FrameLowering *getFrameLowering() const {
       return &FrameLowering;
@@ -45,11 +46,11 @@ namespace llvm {
     virtual const Z80SelectionDAGInfo *getSelectionDAGInfo() const {
       return &TSInfo;
     }
-    virtual const Z80Subtarget *getSubtargetImpl() const { return &Subtarget; }
+    virtual const TargetSubtargetInfo *getSubtargetImpl() const override { return &Subtarget; }
     virtual const Z80TargetLowering *getTargetLowering() const {
       return &TLInfo;
     }
-    virtual TargetPassConfig *createPassConfig(PassManagerBase &PM);
+    virtual TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   }; // end class Z80TargetMachine
 } // end namespace llvm
 
