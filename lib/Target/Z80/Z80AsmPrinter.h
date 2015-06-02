@@ -25,7 +25,7 @@ namespace llvm {
     virtual const char *getPassName() const {
       return "Z80 Assembly Printer";
     }
-    // virtual void EmitInstruction(const MachineInstr *MI);
+    virtual void EmitInstruction(const MachineInstr *MI);
   }; // end class Z80AsmPrinter
 } // end namespace llvm
 
