@@ -78,7 +78,7 @@ void Z80InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(Z80::POP16r), DestReg);
     return;
   }
-  llvm_unreachable("Imposible reg-to-reg copy");
+  llvm_unreachable("Impossible reg-to-reg copy");
 }
 
 MachineInstr *Z80InstrInfo::commuteInstruction(MachineInstr *MI,
