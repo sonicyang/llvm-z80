@@ -11,8 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Z80TargetMachine.h"
 #include "Z80.h"
+#include "Z80TargetMachine.h"
+#include "Z80TargetObjectFile.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
@@ -25,9 +26,10 @@ Z80TargetMachine::Z80TargetMachine(const Target &T, StringRef TT, StringRef CPU,
   StringRef FS, const TargetOptions &Options, Reloc::Model RM,
   CodeModel::Model CM, CodeGenOpt::Level OL)
   : LLVMTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL),
-  DL("e-p:16:8:8-i8:8:8-i16:8:8-n8:16"),
-  FrameLowering(*this), InstrInfo(*this), TSInfo(this->DL),
-  Subtarget(TT, CPU, FS), TLInfo(*this)
+  //DL("e-p:16:8:8-i8:8:8-i16:8:8-n8:16"),
+  TLOF(make_unique<Z80ELFTargetObjectFile>()),
+  FrameLowering(*this), InstrInfo(*this),
+  Subtarget(TT, CPU, FS, this), TLInfo(*this)
 {
   initAsmInfo();
 }

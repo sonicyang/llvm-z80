@@ -24,10 +24,9 @@
 
 namespace llvm {
   class Z80TargetMachine : public LLVMTargetMachine {
-    const DataLayout DL;  // Calculates type size & alignment
+    std::unique_ptr<TargetLoweringObjectFile> TLOF;
     Z80FrameLowering FrameLowering;
     Z80InstrInfo InstrInfo;
-    Z80SelectionDAGInfo TSInfo;
     Z80Subtarget Subtarget;
     Z80TargetLowering TLInfo;
   public:
@@ -35,7 +34,7 @@ namespace llvm {
       StringRef FS, const TargetOptions &Options, Reloc::Model RM,
       CodeModel::Model CM, CodeGenOpt::Level OL);
     ~Z80TargetMachine() override;
-    virtual const DataLayout *getDataLayout() const { return &DL; }
+    virtual const DataLayout *getDataLayout() const { return this->getSubtargetImpl()->getDataLayout(); }
     virtual const Z80FrameLowering *getFrameLowering() const {
       return &FrameLowering;
     }
@@ -44,11 +43,14 @@ namespace llvm {
       return &getInstrInfo()->getRegisterInfo();
     }
     virtual const Z80SelectionDAGInfo *getSelectionDAGInfo() const {
-      return &TSInfo;
+      return (Z80SelectionDAGInfo*)(this->getSubtargetImpl()->getSelectionDAGInfo());
     }
     virtual const TargetSubtargetInfo *getSubtargetImpl() const override { return &Subtarget; }
     virtual const Z80TargetLowering *getTargetLowering() const {
       return &TLInfo;
+    }
+    virtual TargetLoweringObjectFile *getObjFileLowering() const override {
+      return TLOF.get();
     }
     virtual TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   }; // end class Z80TargetMachine
