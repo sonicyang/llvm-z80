@@ -32,6 +32,11 @@ Z80Subtarget::Z80Subtarget(const std::string &TT, const std::string &CPU, const 
     TSInfo(DL)
 {}
 
+const DataLayout *Z80Subtarget::getDataLayout() const
+{
+    return &(this->DL);
+}
+
 
 const TargetRegisterInfo *Z80Subtarget::getRegisterInfo() const
 {

@@ -37,7 +37,7 @@ namespace llvm {
                  const Z80TargetMachine * TM);
     virtual ~Z80Subtarget() {}
 
-    virtual const DataLayout *getDataLayout() const { return &(this->DL); }
+    virtual const DataLayout *getDataLayout() const;
     virtual const TargetRegisterInfo *getRegisterInfo() const;
     virtual const TargetInstrInfo *getInstrInfo() const;
     virtual const TargetFrameLowering *getFrameLowering() const;
