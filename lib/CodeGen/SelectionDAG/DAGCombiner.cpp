@@ -1633,22 +1633,22 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return SDValue(N, 0);
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
-  if (VT.isInteger() && !VT.isVector()) {
-    APInt LHSZero, LHSOne;
-    APInt RHSZero, RHSOne;
-    DAG.computeKnownBits(N0, LHSZero, LHSOne);
+  //if (VT.isInteger() && !VT.isVector()) {
+    //APInt LHSZero, LHSOne;
+    //APInt RHSZero, RHSOne;
+    //DAG.computeKnownBits(N0, LHSZero, LHSOne);
 
-    if (LHSZero.getBoolValue()) {
-      DAG.computeKnownBits(N1, RHSZero, RHSOne);
+    //if (LHSZero.getBoolValue()) {
+      //DAG.computeKnownBits(N1, RHSZero, RHSOne);
 
-      // If all possibly-set bits on the LHS are clear on the RHS, return an OR.
-      // If all possibly-set bits on the RHS are clear on the LHS, return an OR.
-      if ((RHSZero & ~LHSZero) == ~LHSZero || (LHSZero & ~RHSZero) == ~RHSZero){
-        if (!LegalOperations || TLI.isOperationLegal(ISD::OR, VT))
-          return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N1);
-      }
-    }
-  }
+      //// If all possibly-set bits on the LHS are clear on the RHS, return an OR.
+      //// If all possibly-set bits on the RHS are clear on the LHS, return an OR.
+      //if ((RHSZero & ~LHSZero) == ~LHSZero || (LHSZero & ~RHSZero) == ~RHSZero){
+        //if (!LegalOperations || TLI.isOperationLegal(ISD::OR, VT))
+          //return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N1);
+      //}
+    //}
+  //}
 
   // fold (add x, shl(0 - y, n)) -> sub(x, shl(y, n))
   if (N1.getOpcode() == ISD::SHL &&
@@ -4878,7 +4878,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
     std::tie(DataLo, DataHi) = DAG.SplitVector(Data, DL);
 
     MachineMemOperand *MMO = DAG.getMachineFunction().
-      getMachineMemOperand(MST->getPointerInfo(), 
+      getMachineMemOperand(MST->getPointerInfo(),
                            MachineMemOperand::MOStore,  LoMemVT.getStoreSize(),
                            Alignment, MST->getAAInfo(), MST->getRanges());
 
@@ -4890,7 +4890,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
                       DAG.getConstant(IncrementSize, Ptr.getValueType()));
 
     MMO = DAG.getMachineFunction().
-      getMachineMemOperand(MST->getPointerInfo(), 
+      getMachineMemOperand(MST->getPointerInfo(),
                            MachineMemOperand::MOStore,  HiMemVT.getStoreSize(),
                            SecondHalfAlignment, MST->getAAInfo(),
                            MST->getRanges());
@@ -4953,7 +4953,7 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
     std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemoryVT);
 
     MachineMemOperand *MMO = DAG.getMachineFunction().
-    getMachineMemOperand(MLD->getPointerInfo(), 
+    getMachineMemOperand(MLD->getPointerInfo(),
                          MachineMemOperand::MOLoad,  LoMemVT.getStoreSize(),
                          Alignment, MLD->getAAInfo(), MLD->getRanges());
 
@@ -4965,7 +4965,7 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
                       DAG.getConstant(IncrementSize, Ptr.getValueType()));
 
     MMO = DAG.getMachineFunction().
-    getMachineMemOperand(MLD->getPointerInfo(), 
+    getMachineMemOperand(MLD->getPointerInfo(),
                          MachineMemOperand::MOLoad,  HiMemVT.getStoreSize(),
                          SecondHalfAlignment, MLD->getAAInfo(), MLD->getRanges());
 
@@ -11047,10 +11047,10 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
 
         if (!TLI.isExtractSubvectorCheap(VT, VT.getVectorNumElements()))
           return SDValue();
-        
+
         // Try to replace VecIn1 with two extract_subvectors
         // No need to update the masks, they should still be correct.
-        VecIn2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, VecIn1, 
+        VecIn2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, VecIn1,
           DAG.getConstant(VT.getVectorNumElements(), TLI.getVectorIdxTy()));
         VecIn1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, VecIn1,
           DAG.getConstant(0, TLI.getVectorIdxTy()));
@@ -11637,7 +11637,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 
       if (!TLI.isShuffleMaskLegal(Mask, VT))
         return SDValue();
- 
+
       //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(B, A, M2)
       //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(C, A, M2)
       //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(C, B, M2)
