@@ -14,6 +14,7 @@
 
 #include "Z80.h"
 #include "Z80TargetMachine.h"
+#include "Z80ISelLowering.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,6 +24,7 @@ using namespace llvm;
 
 namespace {
   class Z80DAGToDAGISel : public SelectionDAGISel {
+      const Z80TargetLowering *Z80Lowering;
   public:
     Z80DAGToDAGISel(Z80TargetMachine &TM, CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(TM, OptLevel)
@@ -62,7 +64,17 @@ SDNode *Z80DAGToDAGISel::Select(SDNode *Node)
 
   switch (Node->getOpcode())
   {
-  default: break;
+    default: break;
+    case ISD::FrameIndex:
+        SDLoc dl(Node);
+        int FI = cast<FrameIndexSDNode>(Node)->getIndex();
+
+        SDValue TFI = CurDAG->getTargetFrameIndex(FI, Node->getValueType(0));
+
+        unsigned Opc = Z80::ADD16rSP;
+        return CurDAG->SelectNodeTo(Node, Opc, Node->getValueType(0));
+        break;
+
   }
 
   // Select the default instruction
